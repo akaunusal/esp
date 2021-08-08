@@ -1,0 +1,110 @@
+local debugMode = false
+
+local transparency = .8
+
+local activeChars = {}
+local activePlayers = {}
+
+local function removeCharacter(name)
+    for i, v in pairs(activeChars) do
+        if v.Name == name then
+            table.remove(activeChars, i)
+        end
+    end
+end
+
+local function checkPlayer(plr)
+    for index, x in pairs(activePlayers) do
+        if plr.Name == x.Name then
+            return true, index
+        end
+    end
+    return false
+end
+
+if transparency - .1 < .1 then
+    transparency = .1
+end
+local function illuminatePlayer(char)
+    spawn(function()
+        if game.Players:GetPlayerFromCharacter(char).Name ~= game.Players.LocalPlayer.Name and game.Players:GetPlayerFromCharacter(char).Team ~= game.Players.LocalPlayer.Team  or debugMode == true then
+        local temp = {}
+        table.insert(activePlayers, game.Players:GetPlayerFromCharacter(char))
+        while true do
+            wait(.5)
+            for i, v in pairs(char:GetDescendants()) do
+                if (v:IsA("MeshPart") or v:IsA("Part")) and v.Name ~= "HumanoidRootPart" and (v.Parent:IsA("Folder") or v.Parent:IsA("Model")) then
+                    table.insert(temp, v)
+                end
+            end
+            if #temp < 6 then
+
+                temp = {}
+            else
+                break
+            end
+        end
+        table.insert(activeChars, temp[1].Parent)
+        for i, v in pairs(temp) do
+            local boxAdornment = Instance.new("BoxHandleAdornment")
+            boxAdornment.Name = v.Name.. " HandleAdornment"
+            boxAdornment.Size = v.Size
+            boxAdornment.Transparency = transparency + .1
+            boxAdornment.Color3 = BrickColor.new("Institutional white").Color
+            boxAdornment.ZIndex = 1
+            boxAdornment.AlwaysOnTop = true
+            boxAdornment.Adornee = v
+            boxAdornment.Parent = v
+           
+            local boxAdornment2 = Instance.new("BoxHandleAdornment")
+            boxAdornment2.Name = v.Name.. " HandleAdornment2"
+            boxAdornment2.Size = v.Size * 1.1
+            boxAdornment2.Transparency = transparency - .1
+            boxAdornment2.Color3 = BrickColor.new("Lime green").Color
+            boxAdornment2.ZIndex = 2
+            boxAdornment2.AlwaysOnTop = false
+            boxAdornment2.Adornee = v
+            boxAdornment2.Parent = v
+        end
+
+        temp[1].Parent:FindFirstChild("Humanoid").Died:Connect(function()
+            removeCharacter(temp[1].Parent.Name)
+        end)
+    end
+    end)
+end
+
+wait(4)
+
+for i, v in pairs(game.Players:GetChildren()) do
+    illuminatePlayer(v.Character)
+    v.CharacterAdded:Connect(function()
+        illuminatePlayer(v.Character)
+    end)
+end
+
+game.Players.PlayerAdded:Connect(function(v)
+    v.CharacterAdded:Connect(function()
+        illuminatePlayer(v.Character)
+    end)
+end)
+
+game.Players.PlayerRemoving:Connect(function(plr)
+    if checkPlayer(plr) then
+        local foo, i = checkPlayer(plr)
+        table.remove(activePlayers, i)
+        removeCharacter(plr.Character)
+    end
+end)
+
+spawn(function()
+    wait(.5)
+    for i, v in pairs(game.Players:GetChildren()) do
+        if not checkPlayer(v) then
+            illuminatePlayer(v.Character or v.CharacterAdded:Wait())
+            v.CharacterAdded:Connect(function()
+                illuminatePlayer()
+            end)
+        end
+    end
+end)
